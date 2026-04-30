@@ -1,18 +1,29 @@
-# Build stage
+# Build stage - Force fresh dependency download
 FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /app
+
+# Clear Maven cache first (critical fix)
+RUN rm -rf /root/.m2/repository
+
+# Copy pom.xml
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+
+# Force download ALL dependencies fresh
+RUN mvn dependency:go-offline -B -U --fail-never
+
+# Copy source and build
 COPY src ./src
-RUN mvn clean package -DskipTests
+
+# Clean and package - forcing everything fresh
+RUN mvn clean package -DskipTests -U
 
 # Run stage
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 
-# Download MySQL connector (ensures it's available)
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Verify MySQL driver is present (will show in logs)
+RUN jar tf app.jar | grep -i "mysql.*connector" && echo "✓ MySQL driver found" || echo "✗ MySQL driver MISSING"
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-Xmx256m", "-jar", "app.jar"]
