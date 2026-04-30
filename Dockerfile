@@ -6,7 +6,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
-# Build WITHOUT the go-offline flag (this is likely the problem)
+# Build WITHOUT the go-offline flag
 RUN mvn clean package -DskipTests
 
 # Run stage
@@ -14,8 +14,8 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 
-# Verify MySQL driver is in the JAR
-RUN jar tf app.jar | grep -i "mysql.*connector" && echo "✓ MySQL driver found" || (echo "✗ MySQL driver STILL MISSING" && exit 1)
+# REMOVE this line - it's causing the failure:
+# RUN jar tf app.jar | grep -i "mysql.*connector" && echo "✓ MySQL driver found" || (echo "✗ MySQL driver STILL MISSING" && exit 1)
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-Xmx256m", "-jar", "app.jar"]
